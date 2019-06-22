@@ -3,6 +3,12 @@ package com.ki.codegen;
 import org.openapitools.codegen.*;
 import io.swagger.models.properties.*;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.PathItem.HttpMethod;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Schema;
 
 import org.openapitools.codegen.utils.ModelUtils;
@@ -10,11 +16,14 @@ import static org.openapitools.codegen.utils.StringUtils.underscore;
 import static org.openapitools.codegen.utils.StringUtils.camelize;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.io.File;
 
 public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
+  private static final Logger LOGGER = LoggerFactory.getLogger(PythonMlGenerator.class);
 
   // source folder where to write the files
   protected String sourceFolder = "openapi-server";
@@ -396,4 +405,123 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
 
     return null;
   }
+
+  @Override
+  public void preprocessOpenAPI(OpenAPI openAPI) {
+    Map<String, PathItem> paths = openAPI.getPaths();
+    if (paths != null) {
+      List<String> pathnames = new ArrayList(paths.keySet());
+      for (String pathname : pathnames) {
+        PathItem path = paths.get(pathname);
+        // Converts path parameters to snake_case
+        if (pathname.contains("{")) {
+          String fixedPath = new String();
+          for (String token : pathname.substring(1).split("/")) {
+            if (token.startsWith("{")) {
+              String snake_case_token = "{" + this.toParamName(token.substring(1, token.length() - 1)) + "}";
+              if (!token.equals(snake_case_token)) {
+                token = snake_case_token;
+              }
+            }
+            fixedPath += "/" + token;
+          }
+          if (!fixedPath.equals(pathname)) {
+            LOGGER.warn("Path '" + pathname + "' is not consistant with Python variable names. It will be replaced by '" + fixedPath + "'");
+            paths.remove(pathname);
+            path.addExtension("x-python-connexion-openapi-name", pathname);
+            paths.put(fixedPath, path);
+          }
+        }
+        Map<HttpMethod, Operation> operationMap = path.readOperationsMap();
+        if (operationMap != null) {
+          for (HttpMethod method : operationMap.keySet()) {
+            Operation operation = operationMap.get(method);
+            String tag = "default";
+            if (operation.getTags() != null && operation.getTags().size() > 0) {
+              tag = operation.getTags().get(0);
+            }
+            String operationId = operation.getOperationId();
+            if (operationId == null) {
+              operationId = getOrGenerateOperationId(operation, pathname, method.toString());
+            }
+            operation.setOperationId(toOperationId(operationId));
+            if (operation.getExtensions() == null || operation.getExtensions().get("x-openapi-router-controller") == null) {
+              operation.addExtension(
+                "x-openapi-router-controller", sourceFolder + ".controllers." + toApiFilename(tag)
+              );
+            }
+            if (operation.getParameters() != null) {
+              for (Parameter parameter : operation.getParameters()) {
+                String swaggerParameterName = parameter.getName();
+                String pythonParameterName = this.toParamName(swaggerParameterName);
+                if (!swaggerParameterName.equals(pythonParameterName)) {
+                  LOGGER.warn("Parameter name '" + swaggerParameterName + "' is not consistant with Python variable names. It will be replaced by '" + pythonParameterName + "'");
+                  parameter.addExtension("x-python-connexion-openapi-name", swaggerParameterName);
+                  parameter.setName(pythonParameterName);
+                }
+                if (swaggerParameterName.isEmpty()) {
+                  LOGGER.error("Missing parameter name in " + pathname + "." + parameter.getIn());
+                }
+              }
+            }
+            RequestBody body = operation.getRequestBody();
+            if (body != null) {
+              if (body.getExtensions() == null || !body.getExtensions().containsKey("x-body-name")) {
+                String bodyParameterName = "body";
+                if (operation.getExtensions() != null && operation.getExtensions().containsKey("x-codegen-request-body-name")) {
+                  bodyParameterName = (String) operation.getExtensions().get("x-codegen-request-body-name");
+                } else {
+                  // Used by code generator
+                  operation.addExtension("x-codegen-request-name", bodyParameterName);
+                }
+                // Used by connexion
+                body.addExtension("x-body-name", bodyParameterName);
+              }
+            }
+          }
+        }
+      }
+      // Sort path names after variable name fix
+      List<String> fixedPathnames = new ArrayList(paths.keySet());
+      Collections.sort(fixedPathnames);
+      for (String pathname : fixedPathnames) {
+        PathItem pathItem = paths.remove(pathname);
+        paths.put(pathname, pathItem);
+      }
+    }
+  }
+
+  @Override
+  public Map<String, Object> postProcessAllModels(Map<String, Object> objs) {
+    Map<String, Object> result = super.postProcessAllModels(objs);
+    for (Map.Entry<String, Object> entry : result.entrySet()) {
+      Map<String, Object> inner = (Map<String, Object>) entry.getValue();
+      List<Map<String, Object>> models = (List<Map<String, Object>>) inner.get("models");
+      for (Map<String, Object> mo : models) {
+        CodegenModel cm = (CodegenModel) mo.get("model");
+        // Add additional filename information for imports
+        mo.put("pyImports", toPyImports(cm, cm.imports));
+      }
+    }
+    return result;
+  }
+
+  private List<Map<String, String>> toPyImports(CodegenModel cm, Set<String> imports) {
+    List<Map<String, String>> pyImports = new ArrayList<>();
+    for (String im : imports) {
+      if (!im.equals(cm.classname)) {
+        HashMap<String, String> pyImport = new HashMap<>();
+        pyImport.put("import", toModelImport(im));
+        pyImports.add(pyImport);
+      }
+    }
+    return pyImports;
+  }
+
+  @Override
+  public Map<String, Object> postProcessSupportingFileData(Map<String, Object> objs) {
+    generateYAMLSpecFile(objs);
+    return super.postProcessSupportingFileData(objs);
+  }
+
 }
