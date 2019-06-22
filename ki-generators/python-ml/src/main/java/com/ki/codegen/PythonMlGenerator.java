@@ -3,6 +3,14 @@ package com.ki.codegen;
 import org.openapitools.codegen.*;
 import io.swagger.models.properties.*;
 
+import io.swagger.v3.oas.models.media.Schema;
+
+import org.openapitools.codegen.utils.ModelUtils;
+import static org.openapitools.codegen.utils.StringUtils.underscore;
+import static org.openapitools.codegen.utils.StringUtils.camelize;
+
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.*;
 import java.io.File;
 
@@ -221,5 +229,171 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
   public String escapeQuotationMark(String input) {
     //TODO: check that this logic is safe to escape quotation mark to avoid code injection
     return input.replace("\"", "\\\"");
+  }
+
+  private static String dropDots(String str) {
+    return str.replaceAll("\\.", "_");
+  }
+
+  @Override
+  public String toModelName(String name) {
+    // sanitize name, replace unexpected character.
+    name = sanitizeName(name);
+
+    // remove dollar sign
+    name = name.replaceAll("$", "");
+
+    // camelize the model name, phone_number => PhoneNumber
+    return org.openapitools.codegen.utils.StringUtils.camelize(name);
+  }
+
+  @Override
+  public String toModelFilename(String name) {
+    // underscore the model file name, PhoneNumber => phone_number
+    return org.openapitools.codegen.utils.StringUtils.underscore(dropDots(toModelName(name)));
+  }
+
+  @Override
+  public String toModelImport(String name) {
+    String modelImport;
+    if (StringUtils.startsWithAny(name, "import", "from")) {
+      modelImport = name;
+    } else {
+      modelImport = "from ";
+      if (!"".equals(modelPackage())) {
+        modelImport += modelPackage() + "."; // for example: openapi_server.models.
+      }
+      modelImport += toModelFilename(name) + " import " + name; // for example: from openapi_server.models.phone_number import PhoneNumber
+    }
+    return modelImport;
+  }
+
+  @Override
+  public String toApiFilename(String name) {
+    return org.openapitools.codegen.utils.StringUtils.underscore(name);
+  }
+
+  @Override
+  public String toOperationId(String operationId) {
+    return org.openapitools.codegen.utils.StringUtils.underscore(sanitizeName(operationId));
+  }
+
+  @Override
+  public String toVarName(String name) {
+    // sanitize name, replace unexpected character.
+    name = sanitizeName(name);
+
+    // remove dollar sign
+    name = name.replaceAll("$", "");
+
+    // if it's all uppercase, convert to lower case
+    if (name.matches("^[A-Z_]*$")) {
+      name = name.toLowerCase(Locale.ROOT);
+    }
+
+    // underscore the variable name, pedId => pet_id
+    name = org.openapitools.codegen.utils.StringUtils.underscore(name);
+
+    // remove leading underscore
+    name = name.replaceAll("^_*", "");
+
+    // for reserved word or word starting with number, append _
+    if (isReservedWord(name) || name.matches("^\\d.*")) {
+      name = escapeReservedWord(name);
+    }
+
+    return name;
+  }
+
+  @Override
+  public String toParamName(String name) {
+    return toVarName(name);
+  }
+
+  @Override
+  public String getSchemaType(Schema p) {
+    String schemaType = super.getSchemaType(p);
+    String type = null;
+    if (typeMapping.containsKey(schemaType)) {
+      type = typeMapping.get(schemaType);
+      if (languageSpecificPrimitives.contains(type)) {
+        return type;
+      }
+    } else {
+      type = toModelName(schemaType);
+    }
+    return type;
+  }
+
+  /**
+   * Return the default value of the property
+   *
+   * @param p OpenAPI property object
+   * @return string representation of the default value of the property
+   */
+  @Override
+  public String toDefaultValue(Schema p) {
+    if (ModelUtils.isBooleanSchema(p)) {
+      if (p.getDefault() != null) {
+        if (p.getDefault().toString().equalsIgnoreCase("false"))
+          return "False";
+        else
+          return "True";
+      }
+    } else if (ModelUtils.isDateSchema(p)) {
+      // TODO
+    } else if (ModelUtils.isDateTimeSchema(p)) {
+      // TODO
+    } else if (ModelUtils.isNumberSchema(p)) {
+      if (p.getDefault() != null) {
+        return p.getDefault().toString();
+      }
+    } else if (ModelUtils.isIntegerSchema(p)) {
+      if (p.getDefault() != null) {
+        return p.getDefault().toString();
+      }
+    } else if (ModelUtils.isStringSchema(p)) {
+      if (p.getDefault() != null) {
+        return "'" + (String) p.getDefault() + "'";
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Return the example value of the property
+   *
+   * @param p OpenAPI property object
+   * @return string representation of the example value of the property
+   */
+  @Override
+  public String toExampleValue(Schema p) {
+    if (ModelUtils.isBooleanSchema(p)) {
+      if (p.getExample() != null) {
+        if (p.getExample().toString().equalsIgnoreCase("false"))
+          return "False";
+        else
+          return "True";
+      }
+    } else if (ModelUtils.isDateSchema(p)) {
+      // TODO
+    } else if (ModelUtils.isDateTimeSchema(p)) {
+      // TODO
+    } else if (ModelUtils.isNumberSchema(p)) {
+      if (p.getExample() != null) {
+        return p.getExample().toString();
+      }
+    } else if (ModelUtils.isIntegerSchema(p)) {
+      if (p.getExample() != null) {
+        return p.getExample().toString();
+      }
+    } else if (ModelUtils.isStringSchema(p)) {
+      if (p.getExample() != null) {
+        return "'" + (String) p.getExample() + "'";
+      }
+    }
+
+    return null;
   }
 }
