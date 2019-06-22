@@ -9,7 +9,7 @@ import java.io.File;
 public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
 
   // source folder where to write the files
-  protected String sourceFolder = "src";
+  protected String sourceFolder = "openapi-server";
   protected String apiVersion = "1.0.0";
 
   /**
@@ -81,7 +81,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      */
     modelTemplateFiles.put(
       "model.mustache", // the template to use
-      ".sample");       // the extension for each file to write
+      ".py");       // the extension for each file to write
 
     /**
      * Api classes.  You can write classes for each Api file with the apiTemplateFiles map.
@@ -90,7 +90,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      */
     apiTemplateFiles.put(
       "api.mustache",   // the template to use
-      ".sample");       // the extension for each file to write
+      ".py");       // the extension for each file to write
 
     /**
      * Template Location.  This is the location which templates will be read from.  The generator
@@ -101,20 +101,18 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Api Package.  Optional, if needed, this can be used in templates
      */
-    apiPackage = "org.openapitools.api";
+    //apiPackage = "org.openapitools.api";
 
     /**
      * Model Package.  Optional, if needed, this can be used in templates
      */
-    modelPackage = "org.openapitools.model";
+    //modelPackage = sourceFolder + ".models";
 
     /**
      * Reserved words.  Override this with reserved words specific to your language
      */
     reservedWords = new HashSet<String> (
-      Arrays.asList(
-        "sample1",  // replace with static values
-        "sample2")
+      Arrays.asList()
     );
 
     /**
@@ -122,6 +120,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      * are available in models, apis, and supporting files
      */
     additionalProperties.put("apiVersion", apiVersion);
+    additionalProperties.put("sourceFolder", sourceFolder);
 
     /**
      * Supporting Files.  You can write single files for the generator with the
@@ -130,7 +129,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      */
     supportingFiles.add(new SupportingFile("myFile.mustache",   // the input template or file
       "",                                                       // the destination folder, relative `outputFolder`
-      "myFile.sample")                                          // the output file
+      "myFile.py")                                          // the output file
     );
 
     /**
@@ -139,9 +138,37 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      */
     languageSpecificPrimitives = new HashSet<String>(
       Arrays.asList(
-        "Type1",      // replace these with your types
-        "Type2")
+        "int",
+        "float",
+        "List",
+        "Dict",
+        "bool",
+        "str",
+        "datetime",
+        "date",
+        "file",
+        "object")
     );
+
+    /**
+     * Type Mapping
+     */
+    typeMapping = new HashMap<String, String>();
+    typeMapping.put("integer", "int");
+    typeMapping.put("float", "float");
+    typeMapping.put("number", "float");
+    typeMapping.put("long", "int");
+    typeMapping.put("double", "float");
+    typeMapping.put("array", "List");
+    typeMapping.put("map", "Dict");
+    typeMapping.put("string", "str");
+    typeMapping.put("date", "date");
+    typeMapping.put("boolean", "bool");
+    typeMapping.put("DateTime", "datetime");
+    typeMapping.put("object", "object");
+    typeMapping.put("file", "file");
+    typeMapping.put("UUID", "str");
+
   }
 
   /**
@@ -160,7 +187,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
    * instantiated
    */
   public String modelFileFolder() {
-    return outputFolder + "/" + sourceFolder + "/" + modelPackage().replace('.', File.separatorChar);
+    return outputFolder + "/" + sourceFolder + "/models";
   }
 
   /**
@@ -169,7 +196,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
    */
   @Override
   public String apiFileFolder() {
-    return outputFolder + "/" + sourceFolder + "/" + apiPackage().replace('.', File.separatorChar);
+    return outputFolder + "/" + sourceFolder + "/controllers";
   }
 
   /**
