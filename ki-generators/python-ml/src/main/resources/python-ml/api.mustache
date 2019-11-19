@@ -1,28 +1,30 @@
+import connexion
+import six
 
-# This is a sample api mustache template.  It is representing a ficticous 
-# language and won't be usable or compile to anything without lots of changes.
-# Use it as an example.  You can access the variables in the generator object
-# like such:
+{{#imports}}{{import}}
+{{/imports}}
+from {{sourceFolder}} import utils
+{{#operations}}{{#operation}}
 
-# use the package from the `apiPackage` variable
-package: {{package}}
+def {{operationId}}({{#allParams}}{{^isBodyParam}}{{paramName}}{{^required}}=None{{/required}}{{/isBodyParam}}{{#hasMore}}{{^isBodyParam}}, {{/isBodyParam}}{{/hasMore}}{{/allParams}}):
+  """
+  {{#summary}}{{.}}{{/summary}}{{^summary}}{{operationId}}{{/summary}}{{#notes}}
+  {{.}}{{/notes}}
 
-# operations block
-{{#operations}}
-classname: {{classname}}
+  Parameters
+  ----------
+  {{#allParams}}{{^isBodyParam}}{{paramName}}{{/isBodyParam}}
+  {{#hasMore}}{{^isBodyParam}}
+  {{/isBodyParam}}{{/hasMore}}{{/allParams}}
+  Returns
+  -------
+  {{#returnType}}{{.}}{{/returnType}}{{^returnType}}None{{/returnType}}
+  """
 
-# loop over each operation in the API:
-{{#operation}}
-
-# each operation has an `operationId`:
-operationId: {{operationId}}
-
-# and parameters:
-{{#allParams}}
-{{paramName}}: {{dataType}}
-{{/allParams}}
-
-{{/operation}}
-
-# end of operations block
-{{/operations}}
+  if connexion.request.is_json:
+    print(connexion.request.get_json())
+    {{#allParams}}
+      #{{paramName}} = {{baseType}}.from_dict(connexion.request.get_json())
+    {{/allParams}}
+  return 'do some magic!'
+{{/operation}}{{/operations}}

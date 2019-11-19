@@ -1,1 +1,33 @@
-# This is a sample model mustache template.
+from typing import List, Dict
+from {{sourceFolder}} import utils
+
+{{#models}}{{#model}}class {{classname}}():
+  def __init__(self{{#vars}}, {{name}}={{#defaultValue}}{{{defaultValue}}}{{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{/vars}}):
+    """
+    {{classname}} - a model defined in OpenAPI
+
+    {{#vars}}
+    {{name}} : {{dataType}}
+    
+    {{/vars}}
+    """
+
+    self.openapi_types = {
+    {{#vars}}
+      '{{name}}': {{{dataType}}}{{#hasMore}},{{/hasMore}}
+    {{/vars}}
+    }
+
+    self.attribute_map = {
+    {{#vars}}
+      '{{name}}': '{{baseName}}'{{#hasMore}},{{/hasMore}}
+    {{/vars}}
+    }
+
+    self._{{name}} = {{name}}
+
+  @classmethod
+  def from_dict(cls, dikt):
+    return util.deserialize_model(dikt, cls)
+
+{{/model}}{{/models}}

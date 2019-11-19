@@ -26,7 +26,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(PythonMlGenerator.class);
 
   // source folder where to write the files
-  protected String sourceFolder = "openapi-server";
+  protected String sourceFolder = "openapi_server";
   protected String apiVersion = "1.0.0";
 
   /**
@@ -123,7 +123,7 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
     /**
      * Model Package.  Optional, if needed, this can be used in templates
      */
-    //modelPackage = sourceFolder + ".models";
+    modelPackage = sourceFolder + ".models";
 
     /**
      * Reserved words.  Override this with reserved words specific to your language
@@ -144,10 +144,15 @@ public class PythonMlGenerator extends DefaultCodegen implements CodegenConfig {
      * entire object tree available.  If the input file has a suffix of `.mustache
      * it will be processed by the template engine.  Otherwise, it will be copied
      */
-    supportingFiles.add(new SupportingFile("myFile.mustache",   // the input template or file
-      "",                                                       // the destination folder, relative `outputFolder`
-      "myFile.py")                                          // the output file
-    );
+    supportingFiles.add(new SupportingFile("__init__server.mustache", sourceFolder, "__init__.py"));
+    supportingFiles.add(new SupportingFile("openapi.mustache", sourceFolder + "/specs/", "openapi.yaml"));
+    supportingFiles.add(new SupportingFile("wsgi.mustache", "", "wsgi.py"));
+    supportingFiles.add(new SupportingFile("dev.config.mustache", "", "dev.config.py"));
+    supportingFiles.add(new SupportingFile("utils.mustache", sourceFolder, "utils.py"));
+    supportingFiles.add(new SupportingFile("__init__.mustache", sourceFolder + "/controllers/", "__init__.py"));
+    supportingFiles.add(new SupportingFile("__init__.mustache", sourceFolder + "/models/", "__init__.py"));
+    supportingFiles.add(new SupportingFile("utils.mustache", sourceFolder, "utils.py"));
+    supportingFiles.add(new SupportingFile("typing_utils.mustache", sourceFolder, "typing_utils.py"));
 
     /**
      * Language Specific Primitives.  These types will not trigger imports by

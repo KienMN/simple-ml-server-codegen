@@ -1,0 +1,275 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Simple machine learning service
+  license:
+    name: MIT
+servers:
+  - url: http://127.0.0.1:8889
+paths:
+  /models:
+    get:
+      summary: List all models
+      operationId: listModels
+      tags:
+        - models
+      responses:
+        '200':
+          description: A paged array of pets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Models"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a model
+      operationId: createModel
+      requestBody:
+        description: Parameters when creating a model
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinearRegressionModel"
+
+      tags:
+        - models
+      responses:
+        '201':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
+  /models/{modelId}:
+    get:
+      summary: Info for a specific model
+      operationId: showModelById
+      tags:
+        - models
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          description: The id of the model to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinearRegressionModel"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
+  /models/{modelId}/train:
+    post:
+      summary: Train a model
+      operationId: modelTrain
+      tags:
+        - models
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          description: The id of the model to train
+          schema:
+            type: string
+      requestBody:
+        description: Optional description
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingRequestBody"
+      responses:
+        '201':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
+  /models/{modelId}/validate:
+    post:
+      summary: Validate a model
+      operationId: modelValidate
+      tags:
+        - models
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          description: The id of the model to train
+          schema:
+            type: string
+      requestBody:
+        description: Optional description
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRequestBody"
+
+      responses:
+        '201':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Metrics"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /models/{modelId}/predict:
+    post:
+      summary: Predict using a trained model
+      operationId: modelPredict
+      tags:
+        - models
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          description: The id of the model to train
+          schema:
+            type: string
+      requestBody:
+        description: Optional description
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Samples"
+
+      responses:
+        '201':
+          description: Target value prediction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Targets"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    LinearRegression:
+      properties:
+        fitIntercept:
+          type: boolean
+          default: true
+          example: true
+        normalize:
+          type: boolean
+          default: false
+          example: false
+    LinearRegressionModel:
+      allOf:
+        - type: object
+          properties:
+            modelId:
+              type: string
+        - $ref: "#/components/schemas/LinearRegression"
+          
+    Models:
+      type: array
+      items:
+        $ref: "#/components/schemas/LinearRegressionModel"
+    ErrorResponse:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    SuccessResponse:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    Samples:
+      required:
+        - samples
+      properties:
+        samples:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+          example: [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+    Targets:
+      required:
+        - targets
+      properties:
+        targets:
+          type: array
+          items:
+            type: number
+          example: [1, 2, 3]
+    AdditionalParameters:
+      properties:
+        sampleWeight:
+          type: array
+          items:
+            type: number
+          example: [0.5, 0.5, 0.5]
+    TrainingRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/Samples"
+        - $ref: "#/components/schemas/Targets"
+        - $ref: "#/components/schemas/AdditionalParameters"
+    ValidationRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/Samples"
+        - $ref: "#/components/schemas/Targets"
+
+    Metrics:
+      properties:
+        meanSquaredError:
+          type: number
+        meanAbsoluteError:
+          type: number
+        accuracy:
+          type: number
