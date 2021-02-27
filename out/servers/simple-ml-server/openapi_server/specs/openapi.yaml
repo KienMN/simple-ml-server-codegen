@@ -1,0 +1,335 @@
+openapi: 3.0.0
+info:
+  license:
+    name: MIT
+  title: Simple machine learning service
+  version: 1.0.0
+servers:
+- url: http://127.0.0.1:8889
+paths:
+  /models:
+    get:
+      operationId: list_models
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Models'
+          description: A paged array of pets
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: List all models
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+    post:
+      operationId: create_model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinearRegressionModel'
+        description: Parameters when creating a model
+        required: true
+        x-body-name: body
+      responses:
+        201:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: Expected response to a valid request
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: Create a model
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+      x-codegen-request-name: body
+  /models/{model_id}:
+    get:
+      operationId: show_model_by_id
+      parameters:
+      - description: The id of the model to retrieve
+        explode: false
+        in: path
+        name: model_id
+        required: true
+        schema:
+          type: string
+        style: simple
+        x-python-connexion-openapi-name: modelId
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinearRegressionModel'
+          description: Expected response to a valid request
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: Info for a specific model
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+    x-python-connexion-openapi-name: /models/{modelId}
+  /models/{model_id}/predict:
+    post:
+      operationId: model_predict
+      parameters:
+      - description: The id of the model to train
+        explode: false
+        in: path
+        name: model_id
+        required: true
+        schema:
+          type: string
+        style: simple
+        x-python-connexion-openapi-name: modelId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Samples'
+        description: Optional description
+        required: true
+        x-body-name: body
+      responses:
+        201:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Targets'
+          description: Target value prediction
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: Predict using a trained model
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+      x-codegen-request-name: body
+    x-python-connexion-openapi-name: /models/{modelId}/predict
+  /models/{model_id}/train:
+    post:
+      operationId: model_train
+      parameters:
+      - description: The id of the model to train
+        explode: false
+        in: path
+        name: model_id
+        required: true
+        schema:
+          type: string
+        style: simple
+        x-python-connexion-openapi-name: modelId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingRequestBody'
+        description: Optional description
+        required: true
+        x-body-name: body
+      responses:
+        201:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: Expected response to a valid request
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: Train a model
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+      x-codegen-request-name: body
+    x-python-connexion-openapi-name: /models/{modelId}/train
+  /models/{model_id}/validate:
+    post:
+      operationId: model_validate
+      parameters:
+      - description: The id of the model to train
+        explode: false
+        in: path
+        name: model_id
+        required: true
+        schema:
+          type: string
+        style: simple
+        x-python-connexion-openapi-name: modelId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequestBody'
+        description: Optional description
+        required: true
+        x-body-name: body
+      responses:
+        201:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+          description: Validation result
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unexpected error
+      summary: Validate a model
+      tags:
+      - models
+      x-openapi-router-controller: openapi_server.controllers.models
+      x-codegen-request-name: body
+    x-python-connexion-openapi-name: /models/{modelId}/validate
+components:
+  schemas:
+    LinearRegression:
+      properties:
+        fitIntercept:
+          default: true
+          example: true
+          type: boolean
+        normalize:
+          default: false
+          example: false
+          type: boolean
+    LinearRegressionModel:
+      allOf:
+      - $ref: '#/components/schemas/LinearRegressionModel_allOf'
+      - $ref: '#/components/schemas/LinearRegression'
+    Models:
+      items:
+        $ref: '#/components/schemas/LinearRegressionModel'
+      type: array
+    ErrorResponse:
+      properties:
+        code:
+          format: int32
+          type: integer
+        message:
+          type: string
+      required:
+      - code
+      - message
+    SuccessResponse:
+      example:
+        code: 0
+        message: message
+      properties:
+        code:
+          format: int32
+          type: integer
+        message:
+          type: string
+      required:
+      - code
+      - message
+    Samples:
+      example:
+        samples:
+        - - 1
+          - 2
+          - 3
+        - - 2
+          - 3
+          - 4
+        - - 3
+          - 4
+          - 5
+      properties:
+        samples:
+          example:
+          - - 1
+            - 2
+            - 3
+          - - 2
+            - 3
+            - 4
+          - - 3
+            - 4
+            - 5
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+      required:
+      - samples
+    Targets:
+      example:
+        targets:
+        - 1
+        - 2
+        - 3
+      properties:
+        targets:
+          example:
+          - 1
+          - 2
+          - 3
+          items:
+            type: number
+          type: array
+      required:
+      - targets
+    AdditionalParameters:
+      properties:
+        sampleWeight:
+          example:
+          - 0.5
+          - 0.5
+          - 0.5
+          items:
+            type: number
+          type: array
+    TrainingRequestBody:
+      allOf:
+      - $ref: '#/components/schemas/Samples'
+      - $ref: '#/components/schemas/Targets'
+      - $ref: '#/components/schemas/AdditionalParameters'
+    ValidationRequestBody:
+      allOf:
+      - $ref: '#/components/schemas/Samples'
+      - $ref: '#/components/schemas/Targets'
+    Metrics:
+      example:
+        meanSquaredError: 0.8008281904610115
+        accuracy: 1.4658129805029452
+        meanAbsoluteError: 6.027456183070403
+      properties:
+        meanSquaredError:
+          type: number
+        meanAbsoluteError:
+          type: number
+        accuracy:
+          type: number
+    LinearRegressionModel_allOf:
+      properties:
+        modelId:
+          type: string
+
